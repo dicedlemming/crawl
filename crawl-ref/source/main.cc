@@ -1858,6 +1858,7 @@ public:
         add_entry(new MenuEntry("Save and return to main menu", MEL_ITEM, 1, 'S'));
         add_entry(new MenuEntry("Generate and view character dump", MEL_ITEM, 1, '#'));
         add_entry(new MenuEntry("Edit macros", MEL_ITEM, 1, '~'));
+        add_entry(new MenuEntry("Help and manual", MEL_ITEM, 1, '?'));
         add_entry(new MenuEntry("", MEL_SUBTITLE));
         add_entry(new MenuEntry("Quit and <lightred>abandon character</lightred>", MEL_ITEM, 1, 'Q'));
     }
@@ -1891,6 +1892,9 @@ public:
         case 'Q':
             // XX do the yesno in the menu
             cmd = CMD_QUIT;
+            return false;
+        case '?':
+            cmd = CMD_DISPLAY_COMMANDS;
             return false;
         default:
             return true;
