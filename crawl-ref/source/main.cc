@@ -1826,6 +1826,85 @@ static void _handle_autofight(command_type cmd, command_type prev_cmd)
         mprf(MSGCH_ERROR, "Lua error: %s", clua.error.c_str());
 }
 
+class GameMenu : public Menu
+{
+public:
+    command_type cmd;
+    GameMenu()
+        : Menu(MF_SINGLESELECT | MF_ALLOW_FORMATTING
+                | MF_ARROWS_SELECT | MF_WRAP),
+          cmd(CMD_NO_CMD)
+    {
+        set_tag("game_menu");
+        action_cycle = Menu::CYCLE_NONE;
+        menu_action  = Menu::ACT_EXECUTE;
+        set_title(new MenuEntry(
+            string("<w>" CRAWL " ") + Version::Long + "</w>",
+            MEL_TITLE));
+        // XX why is this necessary
+        on_single_selection = [this](const MenuEntry& item)
+        {
+            if (item.hotkeys.size())
+                process_key(item.hotkeys[0]);
+            return false;
+        };
+    }
+
+    void fill_entries()
+    {
+        clear();
+        add_entry(new MenuEntry("", MEL_SUBTITLE));
+        add_entry(new MenuEntry("Return to game", MEL_ITEM, 1, CK_ESCAPE));
+        add_entry(new MenuEntry("Save and return to main menu", MEL_ITEM, 1, 'S'));
+        add_entry(new MenuEntry("Generate and view character dump", MEL_ITEM, 1, '#'));
+        add_entry(new MenuEntry("Edit macros", MEL_ITEM, 1, '~'));
+        add_entry(new MenuEntry("", MEL_SUBTITLE));
+        add_entry(new MenuEntry("Quit and <lightred>abandon character</lightred>", MEL_ITEM, 1, 'Q'));
+    }
+
+    bool process_key(int keyin) override
+    {
+        switch (keyin)
+        {
+        case CK_REDRAW:
+        case ' ': case CK_PGDN: case '>': case '+':
+        case CK_MOUSE_CLICK:
+        case CK_MOUSE_B1:
+        case CK_PGUP: case '<':
+        case CK_UP:
+        case CK_DOWN:
+        case CK_HOME:
+        case CK_END:
+        case CK_ENTER:
+        case CK_MOUSE_B2:
+        CASE_ESCAPE
+            return Menu::process_key(keyin);
+        case 'S':
+            cmd = CMD_SAVE_GAME;
+            return false;
+        case '#':
+            cmd = CMD_SHOW_CHARACTER_DUMP;
+            return false;
+        case '~':
+            cmd = CMD_MACRO_ADD;
+            return false;
+        case 'Q':
+            // XX do the yesno in the menu
+            cmd = CMD_QUIT;
+            return false;
+        default:
+            return true;
+        }
+    }
+
+    vector<MenuEntry *> show(bool reuse_selections = false) override
+    {
+        fill_entries();
+        cycle_hover();
+        return Menu::show(reuse_selections);
+    }
+};
+
 // Note that in some actions, you don't want to clear afterwards.
 // e.g. list_jewellery, etc.
 // calling this directly will not record the command for later replay; if you
@@ -1833,6 +1912,17 @@ static void _handle_autofight(command_type cmd, command_type prev_cmd)
 void process_command(command_type cmd, command_type prev_cmd)
 {
     you.apply_berserk_penalty = true;
+
+    if (cmd == CMD_GAME_MENU)
+    {
+        GameMenu m;
+        m.show();
+        if (m.cmd == CMD_NO_CMD)
+            return;
+        else if (m.cmd == CMD_SAVE_GAME) // skip the prompt
+            save_game(true); // noreturn
+        cmd = m.cmd;
+    }
 
     switch (cmd)
     {
@@ -2081,6 +2171,7 @@ void process_command(command_type cmd, command_type prev_cmd)
 #endif
         break;
 
+    case CMD_SHOW_CHARACTER_DUMP:
     case CMD_CHARACTER_DUMP:
         if (!dump_char(you.your_name))
             mpr("Char dump unsuccessful! Sorry about that.");
@@ -2088,6 +2179,8 @@ void process_command(command_type cmd, command_type prev_cmd)
         else
             tiles.send_dump_info("command", you.your_name);
 #endif
+        if (cmd == CMD_SHOW_CHARACTER_DUMP)
+            display_char_dump();
         break;
 
         // Travel commands.

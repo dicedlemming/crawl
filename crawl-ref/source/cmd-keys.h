@@ -105,7 +105,7 @@
 {'!', CMD_ANNOTATE_LEVEL},
 {'$', CMD_LIST_GOLD},
 {CONTROL('D'), CMD_MACRO_ADD},
-{'~', CMD_MACRO_ADD},
+{'~', CMD_GAME_MENU},
 #ifdef WIZARD
 {'&', CMD_WIZARD},
 {'+', CMD_EXPLORE_MODE},
